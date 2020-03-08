@@ -76,7 +76,7 @@ def backup_package(pname):
             
             if m:
                 app_label = m.group(2)
-                print(app_label)
+                #print(app_label)
         if app_label != '':
             # アプリケーション名が分かればそれを出力ファイル名に
             ofname = '%s_%s__%s.apk' % (app_label, packages[pname]['version'], pname)
