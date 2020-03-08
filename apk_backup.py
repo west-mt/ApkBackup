@@ -4,6 +4,7 @@
 import os
 import re
 import sys
+import shutil
 import tempfile
 import subprocess
 import argparse
@@ -87,7 +88,7 @@ def backup_package(pname):
         ofname = '%s_%s.apk' % (pname, packages[pname]['version'])
 
     # apkファイル名を変更
-    os.rename(tempname, ofname)    
+    shutil.move(tempname, ofname)    
     print('->', ofname)
 
 
