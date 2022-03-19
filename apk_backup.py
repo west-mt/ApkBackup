@@ -17,6 +17,7 @@ def check_aapt():
 
 package_name_patt = re.compile(r'  Package \[(.+)\] \([a-f0-9]+\):')
 version_name_patt = re.compile(r'    versionName=(.+)$')
+#apk_name_patt = re.compile(r'package:(.+)=([-_a-fA-Z0-9.]+)')
 apk_name_patt = re.compile(r'package:(.+)=(.+)')
 application_label_patt = re.compile('application-label(-ja)?\:\'(.+)\'')
 
@@ -24,11 +25,15 @@ def list_packages(output=False):
     packages = {}
 
     # パッケージ名とバージョン一覧を取得
-    for s in subprocess.check_output('adb shell dumpsys package packages', shell=True).decode('utf-8').split('\r\n'):
+    for s in subprocess.check_output('adb shell dumpsys package packages', shell=True).decode('utf-8').split('\n'):
+        # CR+LF対策
+        if len(s) > 0 and s[-1] == '\r':
+            s = s.rstrip()
         m = package_name_patt.match(s)
         if m:
             app_id = m.group(1)
             version = ''
+
             if app_id in packages:
                 continue
         m = version_name_patt.match(s)
@@ -37,17 +42,24 @@ def list_packages(output=False):
             packages[app_id] = {'version': version}
 
     # 各パッケージのapkファイル名を取得
-    for s in subprocess.check_output('adb shell pm list packages -f', shell=True).decode('utf-8').split('\r\n'):
+    for s in subprocess.check_output('adb shell pm list packages -f', shell=True).decode('utf-8').split('\n'):
+        # CR+LF対策
+        if len(s) > 0 and s[-1] == '\r':
+            s = s.rstrip()
         m = apk_name_patt.match(s)
         if m:
             app_id = m.group(2)
             apk_name = m.group(1)
-            packages[app_id]['apk_name'] = apk_name
+            #print(s, app_id, apk_name)
+            if app_id in packages:
+                packages[app_id]['apk_name'] = apk_name
+            else:
+                packages[app_id] = {'apk_name': apk_name, 'version': ''}
 
     # 画面出力
     if output:
         for p in sorted(packages):
-            print('%s  (%s)' % (p, packages[p]['version']))
+            print('%s (%s)' % (p, packages[p]['version']))
 
     return packages
 
@@ -73,6 +85,9 @@ def backup_package(pname):
         app_label = ''
         cmd = 'aapt dump badging %s' % tempname
         for s in subprocess.check_output(cmd, shell=True).decode('utf-8').split('\n'):
+            # CR+LF対策
+            if len(s) > 0 and s[-1] == '\r':
+                s = s.rstrip()
             m = application_label_patt.match(s)
             
             if m:
