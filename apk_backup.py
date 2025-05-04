@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
 import re
 import sys
 import shutil
 import tempfile
 import subprocess
-import argparse
 
-def check_adb():
-    return True
-
-def check_aapt():
-    return True
+def find_cmd(cmd):
+    for cname in (f'{cmd}', f'{cmd}.exe'):
+        if shutil.which(cname):
+            return cname
+    return None
 
 package_name_patt = re.compile(r'  Package \[(.+)\] \([a-f0-9]+\):')
 version_name_patt = re.compile(r'    versionName=(.+)$')
@@ -23,9 +23,10 @@ application_label_patt = re.compile('application-label(-ja)?\:\'(.+)\'')
 
 def list_packages(output=False):
     packages = {}
+    adb_cmd = find_cmd('adb')
 
     # パッケージ名とバージョン一覧を取得
-    for s in subprocess.check_output('adb shell dumpsys package packages', shell=True).decode('utf-8').split('\n'):
+    for s in subprocess.check_output(f'{adb_cmd} shell dumpsys package packages', shell=True).decode('utf-8').split('\n'):
         # CR+LF対策
         if len(s) > 0 and s[-1] == '\r':
             s = s.rstrip()
@@ -42,7 +43,7 @@ def list_packages(output=False):
             packages[app_id] = {'version': version}
 
     # 各パッケージのapkファイル名を取得
-    for s in subprocess.check_output('adb shell pm list packages -f', shell=True).decode('utf-8').split('\n'):
+    for s in subprocess.check_output(f'{adb_cmd} shell pm list packages -f', shell=True).decode('utf-8').split('\n'):
         # CR+LF対策
         if len(s) > 0 and s[-1] == '\r':
             s = s.rstrip()
@@ -73,17 +74,19 @@ def backup_package(pname):
         print('Error: not such package: %s' % pname)
         return
 
+    adb_cmd = find_cmd('adb')
     # apkファイルを取り出し
     tempname = tempfile.mktemp(suffix='.apk')
     #print(tempname)
-    cmd = 'adb pull %s %s' % (packages[pname]['apk_name'], tempname)
+    cmd = f'{adb_cmd} pull {packages[pname]["apk_name"]} {tempname}'
     print(cmd)
     subprocess.call(cmd, shell=True)
 
-    if check_aapt():
+    aapt_cmd = find_cmd('aapt')
+    if aapt_cmd:
         # aaptコマンドがあればアプリケーション名を取得
         app_label = ''
-        cmd = 'aapt dump badging %s' % tempname
+        cmd = f'{aapt_cmd} dump badging {tempname}'
         for s in subprocess.check_output(cmd, shell=True).decode('utf-8').split('\n'):
             # CR+LF対策
             if len(s) > 0 and s[-1] == '\r':
