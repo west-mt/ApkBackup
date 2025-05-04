@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import subprocess
 
+# Find external command
 def find_cmd(cmd):
     for cname in (f'{cmd}', f'{cmd}.exe'):
         if shutil.which(cname):
